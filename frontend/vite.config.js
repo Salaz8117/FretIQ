@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: 'FretIQ',
-        short_name: 'Chords',
+        short_name: 'FretIQ',
         description: 'Find chords, tabs, strumming patterns, and notes for any song across multiple instruments',
         theme_color: '#6366f1',
         background_color: '#f8fafc',
