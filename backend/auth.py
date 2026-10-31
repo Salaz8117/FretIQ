@@ -96,7 +96,8 @@ def create_token_response(user_id: int, email: str, username: str) -> Dict[str, 
         "user": {
             "id": user_id,
             "email": email,
-            "username": username
+            "username": username,
+            "created_at": datetime.utcnow()
         }
     }
 

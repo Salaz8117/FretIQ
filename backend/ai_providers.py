@@ -75,7 +75,7 @@ class OpenAIProvider(AIProvider):
         artist_str = f" by {artist}" if artist else ""
         instruments_str = ", ".join([i.value for i in instruments])
         content_str = ", ".join([c.value for c in content_types])
-        difficulty_str = difficulty.value if difficulty else "any"
+        difficulty_str = difficulty.value if difficulty else "beginner"
         
         return f"""You are an expert music transcriber. Generate accurate musical notation for "{song_name}"{artist_str}.
 
@@ -173,21 +173,26 @@ Rules:
     def _parse_result(self, data: Dict[str, Any], source: SourceType) -> SongResult:
         """Parse AI response into SongResult."""
         chords = {}
-        for inst_str, chord_list in data.get("chords", {}).items():
+        for inst_str, chord_data in data.get("chords", {}).items():
             try:
                 instrument = Instrument(inst_str)
-                chords[instrument] = [
-                    ChordDiagram(
-                        name=c["name"],
-                        instrument=instrument,
-                        frets=c.get("frets", []),
-                        fingers=c.get("fingers", []),
-                        base_fret=c.get("base_fret", 0),
-                        is_barre=c.get("is_barre", False)
-                    )
-                    for c in chord_list
-                ]
-            except ValueError:
+                # Handle piano specially (dict with chords/melody_notes)
+                if instrument == Instrument.PIANO and isinstance(chord_data, dict):
+                    continue  # Will be handled in piano_notes section
+                # For other instruments, expect a list
+                if isinstance(chord_data, list):
+                    chords[instrument] = [
+                        ChordDiagram(
+                            name=c["name"],
+                            instrument=instrument,
+                            frets=c.get("frets", []),
+                            fingers=c.get("fingers", []),
+                            base_fret=c.get("base_fret", 0),
+                            is_barre=c.get("is_barre", False)
+                        )
+                        for c in chord_data
+                    ]
+            except (ValueError, TypeError):
                 continue
         
         strumming_patterns = {}
@@ -254,18 +259,11 @@ Rules:
 
 class AnthropicProvider(AIProvider):
     """Anthropic Claude provider for chord generation."""
-    
+
     def __init__(self):
         self.api_key = settings.anthropic_api_key
         self.base_url = "https://api.anthropic.com/v1"
         self.model = "claude-3-5-sonnet-20241022"
-    
-    @property
-    def name(self) -> str:
-        return "anthropic"
-    
-    async def is_available(self) -> bool:
-        return self.api_key is not None
     
     async def generate_chords(
         self,
@@ -278,7 +276,6 @@ class AnthropicProvider(AIProvider):
         if not self.api_key:
             raise ValueError("Anthropic API key not configured")
         
-        # Use same prompt structure as OpenAI
         openai_provider = OpenAIProvider()
         prompt = openai_provider._build_prompt(song_name, artist, instruments, content_types, difficulty)
         
@@ -305,6 +302,13 @@ class AnthropicProvider(AIProvider):
             result_data = json.loads(content)
             
             return openai_provider._parse_result(result_data, SourceType.AI_GENERATED)
+    
+    @property
+    def name(self) -> str:
+        return "anthropic"
+    
+    async def is_available(self) -> bool:
+        return self.api_key is not None
 
 
 class GoogleProvider(AIProvider):
@@ -418,11 +422,11 @@ class LocalAIProvider(AIProvider):
 
 class OpenRouterProvider(AIProvider):
     """OpenRouter provider - access to 100+ models via OpenAI-compatible API."""
-    
+
     def __init__(self):
         self.api_key = settings.openrouter_api_key
         self.base_url = "https://openrouter.ai/api/v1"
-        self.model = "anthropic/claude-3.5-sonnet"
+        self.model = "openai/gpt-4o-mini"
     
     @property
     def name(self) -> str:
@@ -532,11 +536,11 @@ class DeepSeekProvider(AIProvider):
 
 class NVIDIAProvider(AIProvider):
     """NVIDIA Nemotron provider - OpenAI-compatible API."""
-    
+
     def __init__(self):
         self.api_key = settings.nvidia_api_key
         self.base_url = "https://integrate.api.nvidia.com/v1"
-        self.model = "nvidia/nemotron-3-ultra"
+        self.model = "nvidia/nemotron-3-ultra-550b-a55b"
     
     @property
     def name(self) -> str:

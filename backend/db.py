@@ -141,7 +141,9 @@ async def execute_query(query: str, params: tuple = ()) -> list:
 
 async def execute_one(query: str, params: tuple = ()) -> Optional[dict]:
     """Execute a query and return single result."""
-    async with db_connection() as conn:
+    # Use direct connection to avoid pool issues
+    async with aiosqlite.connect(DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
         cursor = await conn.execute(query, params)
         row = await cursor.fetchone()
         return dict(row) if row else None
@@ -149,7 +151,7 @@ async def execute_one(query: str, params: tuple = ()) -> Optional[dict]:
 
 async def execute_insert(query: str, params: tuple = ()) -> int:
     """Execute an insert and return last row ID."""
-    async with db_connection() as conn:
+    async with aiosqlite.connect(DB_PATH) as conn:
         cursor = await conn.execute(query, params)
         await conn.commit()
         return cursor.lastrowid
@@ -157,7 +159,7 @@ async def execute_insert(query: str, params: tuple = ()) -> int:
 
 async def execute_update(query: str, params: tuple = ()) -> int:
     """Execute an update/delete and return affected rows."""
-    async with db_connection() as conn:
+    async with aiosqlite.connect(DB_PATH) as conn:
         cursor = await conn.execute(query, params)
         await conn.commit()
         return cursor.rowcount

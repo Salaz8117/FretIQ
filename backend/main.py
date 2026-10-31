@@ -404,7 +404,7 @@ async def cache_stats():
 # AUTH ROUTES
 # ============================================================================
 
-@app.post("/api/auth/register", response_model=TokenResponse)
+@app.post("/api/auth/register")
 async def register(user_data: UserRegister):
     """Register a new user."""
     # Check if email exists
@@ -427,20 +427,24 @@ async def register(user_data: UserRegister):
     return create_token_response(user_id, user_data.email, user_data.username)
 
 
-@app.post("/api/auth/login", response_model=TokenResponse)
+@app.post("/api/auth/login")
 async def login(user_data: UserLogin):
     """Login user."""
+    print(f"DEBUG: Login attempt for email: {user_data.email}")
     user = await execute_one("SELECT id, email, username, password_hash FROM users WHERE email = ?", (user_data.email,))
+    print(f"DEBUG: User found: {user is not None}")
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    print(f"DEBUG: Verifying password...")
     if not verify_password(user_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    print(f"DEBUG: Creating token...")
     return create_token_response(user["id"], user["email"], user["username"])
 
 
-@app.get("/api/me", response_model=UserResponse)
+@app.get("/api/me")
 async def get_current_user(user_id: int = Depends(require_user_id)):
     """Get current user profile."""
     user = await execute_one("SELECT id, email, username, created_at FROM users WHERE id = ?", (user_id,))

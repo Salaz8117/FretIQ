@@ -1,5 +1,5 @@
 """
-FretIQ App - Cache Module
+Music Chords App - Cache Module
 In-memory cache with TTL for search results.
 """
 import asyncio
